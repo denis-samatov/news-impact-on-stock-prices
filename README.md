@@ -28,6 +28,3 @@ Run the data processing and analysis scripts to generate insights. Detailed inst
 
 ## Contributing
 Contributions are welcome! Please open an issue to discuss improvements, features, or bugs.
-
-## License
-This project is licensed under the MIT License.
