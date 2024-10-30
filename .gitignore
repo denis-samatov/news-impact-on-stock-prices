@@ -1,0 +1,12 @@
+venv/ 
+data/
+corr_analysis/
+get_news/
+main_application/
+new_daily_news/
+stocks/
+0.csv
+data.tsv
+file.py
+SentimentAnalysis.ipynb
+tune.ipynb
