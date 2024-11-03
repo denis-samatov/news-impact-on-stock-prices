@@ -64,6 +64,24 @@ class NewsParser:
             locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
             formatted_date = datetime.strptime(date, '%d %B %Y').strftime('%Y-%m-%d')
         return formatted_date
+    
+    def __format_time(self, date):
+        """
+        Извлекает время из текстовой даты, если указано.
+        
+        Args:
+            date (str): Дата в текстовом формате.
+        
+        Returns:
+            str: Время в формате `HH:MM`.
+        """
+        if ' в ' in date:
+            time_str = date.split(' в ')[1]
+            time = datetime.strptime(time_str, '%H:%M').strftime('%H:%M')
+        else:
+            time = None
+        
+        return time
 
     def __parse_news(self, news_block):
         """
@@ -73,13 +91,15 @@ class NewsParser:
             news_block (BeautifulSoup): HTML-блок с данными о новости.
         
         Returns:
-            list: Список данных [дата, заголовок, ссылка].
+            list: Список данных [дата, время, заголовок, ссылка, тип новости].
         """
         try:
             date = news_block.find("time").text.strip()
             title = news_block.find("a", class_="iKzE").text.strip()
             href = news_block.find("a", class_="iKzE")["href"]
-            return [self.__format_date(date), title, href]
+            news_type_element = news_block.find("a", class_="ZIkT")
+            news_type = news_type_element.text.strip() if news_type_element else None
+            return [self.__format_date(date), self.__format_time(date), title, href, news_type]
         except Exception as e:
             print("An error occurred while parsing news:", e)
             return None
@@ -110,16 +130,16 @@ class NewsParser:
                 date = news_block.find("time").text.strip()
                 if date > self.min_date:
                     self.min_date = date
-                title = news_block.find("a", class_="iKzE").text.strip()
-                href = news_block.find("a", class_="iKzE")["href"]
-                self.__news.append([date, title, href])
+                parsed_data = self.__parse_news(news_block)
+                if parsed_data:
+                    self.__news.append(parsed_data)
 
             if len(self.__news) >= len_dataset or (stop_date and self.min_date < stop_date):
                 break
 
             if len(self.__news) % 100 == 0:
                 print("Загружено:", len(self.__news))
-                self.save_to_csv(f'{self.ticker}_in_progress.csv')
+                self.save_to_csv('news_data', f'{self.ticker}_in_progress.csv')
 
         self.__driver.quit()
 
@@ -139,13 +159,16 @@ class NewsParser:
         Args:
             output_filename (str): Название CSV-файла для сохранения.
         """
+        
         output_path = os.path.join(output_dir, output_filename)
+        os.makedirs(output_dir, exist_ok=True)
         
         if self.__news:
-            df = pd.DataFrame(self.__news, columns=['Date', 'Title', 'URL'])
+            df = pd.DataFrame(self.__news, columns=['Date', 'Time', 'Title', 'URL', 'Type'])
             df.to_csv(output_path, index=False)
         else:
             print("No news data to save.")
+
 
 # Класс для анализа новостного контента, включая расчет тональности новостей.
 class HelperParser:
@@ -174,16 +197,18 @@ class HelperParser:
                 ticker = row['Ticker']
                 title = row['Title']
                 date = row['Date']
+                time = row['Time']
+                news_type = row['Type']
                 url = row['URL']
-                parsed_data.append(self.parse_url(ticker, title, date, url))
+                parsed_data.append(self.parse_url(ticker, title, date, time, news_type, url))
                 if len(parsed_data) % 10 == 0:
                     print("Загружено", len(parsed_data))
-                    pd.DataFrame(parsed_data).to_csv(f"news_data/{ticker}_news_in_progress.csv")
+                    pd.DataFrame(parsed_data).to_csv(f"news_data/{ticker}_news_in_progress.csv", index=False)
             except:
                 pass
         return pd.DataFrame(parsed_data)
 
-    def parse_url(self, ticker, title, date, url):
+    def parse_url(self, ticker, title, date, time, news_type, url):
         """
         Загружает контент страницы по URL и выполняет анализ тональности.
         
@@ -191,6 +216,8 @@ class HelperParser:
             ticker (str): Тикер компании.
             title (str): Заголовок новости.
             date (str): Дата новости.
+            time (str): Время публикации.
+            news_type (str): Тип новости.
             url (str): URL-адрес новости.
         
         Returns:
@@ -205,7 +232,9 @@ class HelperParser:
         res_dict = {
             'ticker': ticker,
             'date': date,
+            'time': time,
             'title': title,
+            'news_type': news_type,
             'content': content,
             'filtered_content': filtered_content,
             'EN_filtered_content': list(sentiment_df['En Headline'])[0],

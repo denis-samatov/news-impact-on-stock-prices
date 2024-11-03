@@ -1,6 +1,6 @@
 venv/ 
 data/
-corr_analysis/
+correlation_analysis/
 get_news/news_data
 main_application/
 new_daily_news/
