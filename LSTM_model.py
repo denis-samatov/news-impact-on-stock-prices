@@ -3,10 +3,9 @@ import torch
 import torch.nn as nn
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
 
 class StockLSTM(nn.Module):
     """

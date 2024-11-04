@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from collect_process_news import NewsParser, HelperParser
+from news_parser import NewsParser, HelperParser
 
 
 
