@@ -100,7 +100,7 @@ class StockParser:
         plt.ylabel('Цена закрытия', fontsize=14)
         plt.legend(fontsize=12)
         plt.grid(True, linestyle='--', alpha=0.7)
-        plt.style.use('seaborn-v0_8-darkgrid')
+        plt.style.use('seaborn-darkgrid')
         plt.show()
 
     def get_stocks_dataframe(self):
