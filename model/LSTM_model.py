@@ -4,8 +4,24 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 import pandas as pd
+import random
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
+
+
+
+
+def set_seed(seed=42):
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+set_seed(42)
 
 # Определение модели DeepStockLSTM
 class DeepStockLSTM(nn.Module):
@@ -143,5 +159,6 @@ class StockPredictor:
         plt.title('Прогноз цен на акции')
         plt.xlabel('День')
         plt.ylabel('Цена')
+        plt.grid()
         plt.legend()
         plt.show()

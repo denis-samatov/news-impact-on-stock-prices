@@ -6,7 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, make_scorer
 from sklearn.model_selection import GridSearchCV
 from sklearn.base import BaseEstimator, RegressorMixin
-from LSTM_model import DeepStockLSTM
+from model.LSTM_model import DeepStockLSTM
 
 
 

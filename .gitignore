@@ -1,6 +1,6 @@
 venv/ 
 data/
-correlation_analysis/
+correlation_analysis/corr_data.xlsx
 get_news/news_data
 main_application/
 new_daily_news/
