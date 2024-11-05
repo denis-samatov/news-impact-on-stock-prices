@@ -3,13 +3,11 @@ import torch.nn as nn
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 
-
-
-
-
+# Определение модели DeepStockLSTM
 class DeepStockLSTM(nn.Module):
     """
     Улучшенная модель LSTM с несколькими слоями LSTM, Batch Normalization и Dropout для прогнозирования цен на акции.
@@ -25,7 +23,7 @@ class DeepStockLSTM(nn.Module):
         self.num_layers = num_layers
         
         # Несколько LSTM слоев
-        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True, bidirectional=False, dropout=0.3)
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True, dropout=0.3)
         
         # Batch Normalization
         self.batch_norm = nn.BatchNorm1d(hidden_dim)
@@ -49,15 +47,15 @@ class DeepStockLSTM(nn.Module):
         out = self.fc(out)
         return out
 
-
+# Класс для обучения модели и прогнозирования
 class StockPredictor:
     """
     Класс для обучения улучшенной LSTM модели прогнозирования цен на акции и оценки её производительности.
     """
-    def __init__(self, look_back=30, hidden_dim=64, num_layers=3, learning_rate=0.001):
+    def __init__(self, look_back=30, hidden_dim=64, num_layers=3, learning_rate=0.001, input_dim=2):
         self.scaler = MinMaxScaler(feature_range=(-1, 1))
         self.look_back = look_back
-        self.input_dim = 1
+        self.input_dim = input_dim  # Учитываем количество признаков
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
         self.output_dim = 1
@@ -65,18 +63,22 @@ class StockPredictor:
         self.criterion = nn.MSELoss()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
 
-    def load_data(self, train_data):
-        train_data = self.scaler.fit_transform(train_data.reshape(-1, 1))
-        data = []
-        for index in range(len(train_data) - self.look_back):
-            data.append(train_data[index: index + self.look_back])
-        data = np.array(data)
-        x_train = data[:, :-1]
-        y_train = data[:, -1]
-        self.x_train = torch.from_numpy(x_train).type(torch.Tensor)
-        self.y_train = torch.from_numpy(y_train).type(torch.Tensor)
+    def load_data(self, data):
+        # data - это DataFrame с признаками
+        # Нормализация данных
+        data = self.scaler.fit_transform(data)
+        sequences = []
+        targets = []
+        for i in range(len(data) - self.look_back):
+            seq = data[i:i+self.look_back]
+            sequences.append(seq[:-1])  # Последний шаг используем как цель
+            targets.append(data[i+self.look_back-1, 0])  # Предсказываем close_price (первый столбец)
+        sequences = np.array(sequences)
+        targets = np.array(targets)
+        self.x_train = torch.from_numpy(sequences).type(torch.Tensor)
+        self.y_train = torch.from_numpy(targets).type(torch.Tensor)
 
-    def train_model(self, num_epochs=300, batch_size=16):
+    def train_model(self, num_epochs=50, batch_size=32):
         self.model.train()
         hist = []
         for epoch in range(num_epochs):
@@ -88,7 +90,7 @@ class StockPredictor:
                 
                 self.optimizer.zero_grad()
                 outputs = self.model(batch_x)
-                loss = self.criterion(outputs, batch_y)
+                loss = self.criterion(outputs.view(-1), batch_y)
                 loss.backward()
                 self.optimizer.step()
                 
@@ -99,19 +101,36 @@ class StockPredictor:
         
         self.history = hist
 
-    def predict(self, test_data):
-        test_data = self.scaler.transform(test_data.reshape(-1, 1))
-        data = []
-        for index in range(len(test_data) - self.look_back):
-            data.append(test_data[index: index + self.look_back])
-        data = np.array(data)
-        x_test = torch.from_numpy(data[:, :-1]).type(torch.Tensor)
-        y_test = torch.from_numpy(data[:, -1]).type(torch.Tensor)
+    def predict(self, data):
+        # data - это DataFrame с признаками
+        data = self.scaler.transform(data)
+        sequences = []
+        targets = []
+        for i in range(len(data) - self.look_back):
+            seq = data[i:i+self.look_back]
+            sequences.append(seq[:-1])  # Последний шаг используем как цель
+            targets.append(data[i+self.look_back-1, 0])  # Реальное значение close_price
+        sequences = np.array(sequences)
+        targets = np.array(targets)
+        x_test = torch.from_numpy(sequences).type(torch.Tensor)
+        y_test = torch.from_numpy(targets).type(torch.Tensor)
         self.model.eval()
         with torch.no_grad():
             y_test_pred = self.model(x_test)
-        self.predicted_values = self.scaler.inverse_transform(y_test_pred.numpy())
-        self.y_test_original = self.scaler.inverse_transform(y_test.numpy().reshape(-1, 1))
+        # Обратное преобразование предсказанных значений
+        y_test_pred_inv = []
+        y_test_inv = []
+        for i in range(len(y_test_pred)):
+            pred = np.zeros(self.input_dim)
+            actual = np.zeros(self.input_dim)
+            pred[0] = y_test_pred[i].item()
+            actual[0] = y_test[i].item()
+            pred_inv = self.scaler.inverse_transform([pred])
+            actual_inv = self.scaler.inverse_transform([actual])
+            y_test_pred_inv.append(pred_inv[0][0])
+            y_test_inv.append(actual_inv[0][0])
+        self.predicted_values = np.array(y_test_pred_inv)
+        self.y_test_original = np.array(y_test_inv)
 
     def calculate_rmse(self):
         rmse = math.sqrt(mean_squared_error(self.y_test_original, self.predicted_values))
