@@ -16,7 +16,7 @@ This project investigates the influence of news information on stock market pric
 ## Installation
 1. Clone the repository:
     ```bash
-    git clone https://github.com/yourusername/news-impact-on-stock-prices.git
+    git clone https://github.com/denis-samatov/news_impact_on_stock_prices.git
     ```
 2. Install the required packages:
     ```bash
