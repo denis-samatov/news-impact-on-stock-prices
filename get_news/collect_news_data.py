@@ -5,7 +5,8 @@ from news_parser import NewsParser, HelperParser
 
 
 
-# Словарь ключевых слов для каждой компании
+# Dictionary of keywords per company. Values are intentionally left in
+# Russian -- these are matched against real Russian-language news text.
 keywords_dict = {
     "SBER":["СБЕР", "Сбербанк", "Сбер", "Сберколл", "Сбербизнес", "Сбертек", "Сбермаркет", "Мегамаркет", "Греф", "Сберколлектор", "Сбербизнес", "Сбертек", "Сбермаркет", "СберЛогистика", "СберЛизинг", "СберНедвижимость", "Сбербанк-АСТ", "Сбербанк-Резерв", "Сбербанк-Спасение", "Сбербанк-Страхование", "Сбербанк-Технологии", "Сбербанк-Эквайринг", "Сбербанк-Эксперт", "Сбербанк-Контактный Центр"],
     "GAZP":["GAZP", "Газстройпром", "Газпрома","Газпром", "Газпромнефть", "Газпромбанк", "Газпроммедиа", "Газпромтранс", "Газпромдобыча", "Газпромэнерго", "Газпромавиа", "Газпроммежрегионгаз", "Газпроминвестходинг", "Газпромнедра", "Газпромпереработка", "Газпромпоставка", "Газпроммонтаж", "Газпромвнешэкономбанк", "Газпромснаб", "Газпромавтоматизация", "Газпромкомплектация", "Газпромгазораспределение", "Газпромэнергосбыт", "Газпромнефтегаз", "Газпромгазэнергосбыт", "Газпромкапитал", "Газпромстрой", "Газпромнефтьцентр", "Газпромтрансгаз", "Газпромбурение", "Газпромперевозка", "Газпромавтоматика"],
@@ -24,7 +25,7 @@ def main():
             news_parser.parse_news(len_dataset=1000, stop_date='2015-01-01')
             news_parser.save_to_csv(output_dir, 'SBER_news.csv')
         except Exception as e:
-            print(f"Ошибка при сборе новостей: {e}")
+            print(f"Error collecting news: {e}")
         finally:
             news_parser.__driver.quit()
     
@@ -38,9 +39,9 @@ def main():
             parsed_data = parser.parse_dataset(df)
             analyzed_file = os.path.join(output_dir, "SBER_analyzed.csv")
             parsed_data.to_csv(analyzed_file, index=False)
-            print(f"Анализ завершен. Результаты сохранены в {analyzed_file}")
+            print(f"Analysis complete. Results saved to {analyzed_file}")
         except Exception as e:
-            print(f"Ошибка при анализе новостей: {e}")
+            print(f"Error analyzing news: {e}")
         finally:
             parser.close_driver()
 

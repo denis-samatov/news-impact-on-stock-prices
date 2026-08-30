@@ -5,20 +5,19 @@ import pandas as pd
 
 
 
-
 class NewsSentimentAnalyzer:
     """
-    Класс для анализа тональности новостей. Выполняет перевод текста с русского на английский
-    и определяет тональность текста (положительная, отрицательная, нейтральная) с помощью модели FinBERT.
+    Class for analyzing news sentiment. Translates text from Russian to English
+    and determines the text's sentiment (positive, negative, neutral) using the FinBERT model.
     """
 
     def __init__(self, translation_model_name="Helsinki-NLP/opus-mt-ru-en", finbert_model_name="ProsusAI/finbert"):
         """
-        Инициализация NewsSentimentAnalyzer с моделями перевода и анализа тональности.
+        Initializes NewsSentimentAnalyzer with the translation and sentiment-analysis models.
 
         Args:
-            translation_model_name (str): Название модели для перевода текста.
-            finbert_model_name (str): Название модели FinBERT для анализа тональности.
+            translation_model_name (str): Name of the text-translation model.
+            finbert_model_name (str): Name of the FinBERT sentiment-analysis model.
         """
         self.translation_model_name = translation_model_name
         self.finbert_model_name = finbert_model_name
@@ -34,13 +33,13 @@ class NewsSentimentAnalyzer:
 
     def translate_text(self, text):
         """
-        Переводит текст с русского на английский с использованием модели MarianMT.
+        Translates text from Russian to English using the MarianMT model.
 
         Args:
-            text (list): Список строк текста на русском языке.
+            text (list): List of Russian-language text strings.
 
         Returns:
-            list: Список переведенных строк текста на английский.
+            list: List of translated English text strings.
         """
         inputs = self.translation_tokenizer(text, return_tensors="pt", padding=True, truncation=True)
         outputs = self.translation_model.generate(**inputs)
@@ -50,15 +49,16 @@ class NewsSentimentAnalyzer:
 
     def analyze_sentiment(self, financial_text_russian):
         """
-        Анализирует тональность финансовых новостей на русском языке. Сначала переводит текст, 
-        затем использует модель FinBERT для определения тональности.
+        Analyzes the sentiment of Russian-language financial news. First translates
+        the text, then uses the FinBERT model to determine sentiment.
 
         Args:
-            financial_text_russian (list): Список строк текста новостей на русском языке.
+            financial_text_russian (list): List of Russian-language news text strings.
 
         Returns:
-            pd.DataFrame: DataFrame с результатами анализа тональности, включая переведенные тексты, 
-            вероятность для каждой тональности (Positive, Negative, Neutral) и оценку `real_score`.
+            pd.DataFrame: DataFrame with the sentiment-analysis results, including the
+            translated text, the probability for each sentiment (Positive, Negative,
+            Neutral), and the `real_score` score.
         """
         translated_text = self.translate_text(financial_text_russian)
 
@@ -79,6 +79,6 @@ class NewsSentimentAnalyzer:
             "Neutral": neutral
         }
         self.df = pd.DataFrame(table, columns=["Headline", 'En Headline', "Positive", "Negative", "Neutral"])
-        
+
         self.df['real_score'] = self.df['Positive'] - self.df['Negative']
         return self.df

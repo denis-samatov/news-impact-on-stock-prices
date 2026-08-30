@@ -15,12 +15,13 @@ import nltk
 nltk.download('punkt')
 
 
-# Класс для сбора новостей по заданному URL и фильтрации по ключевым словам.
+# Class for collecting news from a given URL and filtering by keywords.
 class NewsParser:
     """
-    Класс для парсинга новостей с заданного URL. Сохраняет результаты парсинга и создает промежуточные сохранения для обработки большого объема данных.
+    Class for parsing news from a given URL. Saves parsing results and creates
+    intermediate saves to handle large volumes of data.
     """
-    
+
     def __init__(self, url, keywords, ticker):
         self.__url = url
         self.__keywords = keywords
@@ -31,13 +32,13 @@ class NewsParser:
 
     def __extract_sentences(self, content):
         """
-        Фильтрует предложения, содержащие ключевые слова, из текста новости.
-        
+        Filters sentences containing keywords out of the news text.
+
         Args:
-            content (str): Текст новости.
-        
+            content (str): News text.
+
         Returns:
-            list: Список отфильтрованных предложений.
+            list: List of filtered sentences.
         """
         sentences = sent_tokenize(content)
         res_sentences = [sentence for sentence in sentences if any(keyword.lower() in sentence.lower() for keyword in self.__keywords)]
@@ -45,13 +46,18 @@ class NewsParser:
 
     def __format_date(self, date):
         """
-        Преобразует текстовую дату в стандартный формат `YYYY-MM-DD`, учитывая относительные даты.
-        
+        Converts a text date into the standard `YYYY-MM-DD` format, accounting for
+        relative dates.
+
+        Note: the source site publishes dates in Russian (e.g. "Сегодня" = "Today",
+        "Вчера" = "Yesterday", and Russian month names), so these string literals
+        match real site content and are intentionally not translated.
+
         Args:
-            date (str): Дата в текстовом формате.
-        
+            date (str): Date as text.
+
         Returns:
-            str: Дата в формате `YYYY-MM-DD`.
+            str: Date in `YYYY-MM-DD` format.
         """
         if 'Сегодня' in date:
             formatted_date = (datetime.now()).strftime('%Y-%m-%d')
@@ -64,34 +70,34 @@ class NewsParser:
             locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
             formatted_date = datetime.strptime(date, '%d %B %Y').strftime('%Y-%m-%d')
         return formatted_date
-    
+
     def __format_time(self, date):
         """
-        Извлекает время из текстовой даты, если указано.
-        
+        Extracts the time from a text date, if present.
+
         Args:
-            date (str): Дата в текстовом формате.
-        
+            date (str): Date as text.
+
         Returns:
-            str: Время в формате `HH:MM`.
+            str: Time in `HH:MM` format.
         """
         if ' в ' in date:
             time_str = date.split(' в ')[1]
             time = datetime.strptime(time_str, '%H:%M').strftime('%H:%M')
         else:
             time = None
-        
+
         return time
 
     def __parse_news(self, news_block):
         """
-        Извлекает данные о конкретной новости из HTML-блока.
-        
+        Extracts data for one news item from an HTML block.
+
         Args:
-            news_block (BeautifulSoup): HTML-блок с данными о новости.
-        
+            news_block (BeautifulSoup): HTML block with the news item's data.
+
         Returns:
-            list: Список данных [дата, время, заголовок, ссылка, тип новости].
+            list: [date, time, title, link, news type].
         """
         try:
             date = news_block.find("time").text.strip()
@@ -106,16 +112,19 @@ class NewsParser:
 
     def parse_news(self, len_dataset=500, stop_date=None):
         """
-        Последовательно парсит новости с сайта, подгружая новые данные и проверяя условия остановки.
-        
+        Sequentially parses news from the site, loading more data and checking
+        stop conditions.
+
         Args:
-            len_dataset (int): Целевое количество новостей для парсинга.
-            stop_date (str): Дата, после которой прекращается парсинг новостей.
+            len_dataset (int): Target number of news items to parse.
+            stop_date (str): Date after which parsing stops.
         """
         self.__driver = webdriver.Chrome()
         self.__driver.get(self.__url)
-        
+
         while len(self.__news) < len_dataset:
+            # XPath text below matches the site's actual Russian-language
+            # "Show more news" button label, so it's left untranslated.
             show_more_button = WebDriverWait(self.__driver, 10).until(
                 EC.presence_of_element_located((By.XPATH, "//span[@class='nlJ0' and contains(text(), 'Показать еще новости')]"))
             )
@@ -138,31 +147,32 @@ class NewsParser:
                 break
 
             if len(self.__news) % 100 == 0:
-                print("Загружено:", len(self.__news))
+                print("Loaded:", len(self.__news))
                 self.save_to_csv('news_data', f'{self.ticker}_in_progress.csv')
 
         self.__driver.quit()
 
     def get_news_list(self):
         """
-        Возвращает список собранных новостей.
-        
+        Returns the list of collected news items.
+
         Returns:
-            list: Список собранных новостей.
+            list: List of collected news items.
         """
         return self.__news
 
     def save_to_csv(self, output_dir, output_filename):
         """
-        Сохраняет данные о новостях в CSV-файл с созданием директории `news_data`, если она отсутствует.
-        
+        Saves the news data to a CSV file, creating the `news_data` directory if
+        it doesn't already exist.
+
         Args:
-            output_filename (str): Название CSV-файла для сохранения.
+            output_filename (str): Name of the CSV file to save.
         """
-        
+
         output_path = os.path.join(output_dir, output_filename)
         os.makedirs(output_dir, exist_ok=True)
-        
+
         if self.__news:
             df = pd.DataFrame(self.__news, columns=['Date', 'Time', 'Title', 'URL', 'Type'])
             df.to_csv(output_path, index=False)
@@ -170,12 +180,12 @@ class NewsParser:
             print("No news data to save.")
 
 
-# Класс для анализа новостного контента, включая расчет тональности новостей.
+# Class for analyzing news content, including computing news sentiment.
 class HelperParser:
     """
-    Класс для анализа новостей, включая расчет тональности и фильтрацию по ключевым словам.
+    Class for analyzing news, including sentiment scoring and keyword filtering.
     """
-    
+
     def __init__(self, keywords, ticker):
         self.__keywords = keywords[ticker]
         self.__driver = webdriver.Chrome()
@@ -183,13 +193,13 @@ class HelperParser:
 
     def parse_dataset(self, dataframe):
         """
-        Обрабатывает набор данных новостей из DataFrame, выполняет анализ каждого URL.
-        
+        Processes a news dataset from a DataFrame, analyzing each URL.
+
         Args:
-            dataframe (pd.DataFrame): DataFrame с новостями.
-        
+            dataframe (pd.DataFrame): DataFrame of news items.
+
         Returns:
-            pd.DataFrame: DataFrame с результатами анализа.
+            pd.DataFrame: DataFrame of analysis results.
         """
         parsed_data = []
         for _, row in dataframe.iterrows():
@@ -202,7 +212,7 @@ class HelperParser:
                 url = row['URL']
                 parsed_data.append(self.parse_url(ticker, title, date, time, news_type, url))
                 if len(parsed_data) % 10 == 0:
-                    print("Загружено", len(parsed_data))
+                    print("Loaded", len(parsed_data))
                     pd.DataFrame(parsed_data).to_csv(f"news_data/{ticker}_news_in_progress.csv", index=False)
             except:
                 pass
@@ -210,25 +220,25 @@ class HelperParser:
 
     def parse_url(self, ticker, title, date, time, news_type, url):
         """
-        Загружает контент страницы по URL и выполняет анализ тональности.
-        
+        Loads the page content at a URL and runs sentiment analysis on it.
+
         Args:
-            ticker (str): Тикер компании.
-            title (str): Заголовок новости.
-            date (str): Дата новости.
-            time (str): Время публикации.
-            news_type (str): Тип новости.
-            url (str): URL-адрес новости.
-        
+            ticker (str): Company ticker.
+            title (str): News headline.
+            date (str): News date.
+            time (str): Publication time.
+            news_type (str): News type.
+            url (str): News URL.
+
         Returns:
-            dict: Результаты анализа тональности.
+            dict: Sentiment analysis results.
         """
         self.__driver.get(url)
         content_html = BeautifulSoup(self.__driver.page_source, 'html.parser')
         content = content_html.find("div", class_="YjHz UBOr RkGZ").text.strip()
         filtered_content = self.__extract_sentences(content)
         sentiment_df = self.__analyzer.analyze_sentiment(filtered_content)
-        
+
         res_dict = {
             'ticker': ticker,
             'date': date,
@@ -247,13 +257,18 @@ class HelperParser:
 
     def __extract_sentences(self, content):
         """
-        Извлекает предложения с ключевыми словами.
-        
+        Extracts sentences containing keywords.
+
+        Note: "Краткосрочная картина" ("Short-term picture") below is a
+        boilerplate heading the source site inserts into articles; it's
+        stripped out as noise, not translated, since it's matched against
+        real Russian-language page content.
+
         Args:
-            content (str): Текст для фильтрации.
-        
+            content (str): Text to filter.
+
         Returns:
-            str: Текст с предложениями, содержащими ключевые слова.
+            str: Text made up of the sentences containing keywords.
         """
         sentences = sent_tokenize(content)
         res_sentences = [sentence.replace("\n", "").replace("•", "").replace("\\x", "").replace("\\xa0", " ").replace("Краткосрочная картина", "") for sentence in sentences if any(keyword.lower() in sentence.lower() for keyword in self.__keywords)]
@@ -261,6 +276,6 @@ class HelperParser:
 
     def close_driver(self):
         """
-        Завершает работу драйвера Selenium.
+        Shuts down the Selenium driver.
         """
         self.__driver.quit()

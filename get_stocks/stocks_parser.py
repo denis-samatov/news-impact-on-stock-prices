@@ -8,7 +8,7 @@ from io import StringIO
 
 
 
-# Словарь с идентификаторами акций на сайте для запроса данных
+# Dictionary of stock IDs on the site, used to request data
 stocks_url_dict = {
     'SBER': 3,
     'GAZP': 16842,
@@ -18,16 +18,16 @@ stocks_url_dict = {
 
 class StockParser:
     """
-    Класс для парсинга данных по акциям с сайта, построения графиков цен закрытия и сохранения данных в CSV файлы.
+    Class for parsing stock data from the site, plotting closing prices, and saving data to CSV files.
     """
 
     def __init__(self, tickers: list, start_date=None, end_date=None):
         """
-        Инициализация класса StockParser.
-        Аргументы:
-            tickers (list): Список тикеров акций для анализа.
-            start_date (str): Начальная дата в формате 'YYYY-MM-DD'. Если не указана, используется текущая дата.
-            end_date (str): Конечная дата в формате 'YYYY-MM-DD'. Если не указана, используется текущая дата.
+        Initialize the StockParser class.
+        Args:
+            tickers (list): List of stock tickers to analyze.
+            start_date (str): Start date in 'YYYY-MM-DD' format. Defaults to the current date if not given.
+            end_date (str): End date in 'YYYY-MM-DD' format. Defaults to the current date if not given.
         """
         self.__tickers = tickers
         self.__year_start = start_date[0:4] if start_date is not None else str(datetime.now().year)
@@ -40,14 +40,14 @@ class StockParser:
 
     def generate_url(self, ticker):
         """
-        Генерирует URL для загрузки данных по заданному тикеру.
-        Аргументы:
-            ticker (str): Тикер акции для построения URL.
-        Возвращает:
-            str: Сформированный URL.
+        Generates the download URL for the given ticker's data.
+        Args:
+            ticker (str): The stock ticker to build the URL for.
+        Returns:
+            str: The resulting URL.
         """
         if ticker not in stocks_url_dict:
-            raise ValueError(f"Тикер {ticker} не найден в словаре stocks_url_dict")
+            raise ValueError(f"Ticker {ticker} not found in stocks_url_dict")
 
         url_template = ('https://export.finam.ru/export9.out?apply=0&p=8&e=.csv&dtf=2&tmf=1&MSOR=0&mstime=on&'
                         'mstimever=1&sep=3&sep2=1&datf=1&at=0&from={start_date}&to={end_date}&market=0&em={em}&'
@@ -67,7 +67,7 @@ class StockParser:
 
     def parse_stocks(self):
         """
-        Загружает данные по каждому тикеру из списка, парсит CSV, преобразует дату и сохраняет в словарь.
+        Downloads data for each ticker in the list, parses the CSV, converts the date, and stores it in a dict.
         """
         for ticker in self.__tickers:
             url = self.generate_url(ticker)
@@ -75,29 +75,29 @@ class StockParser:
                 with urlopen(url) as page:
                     content = page.read().decode('utf-8')
                     df = pd.read_csv(StringIO(content), delimiter=';', names=['ticker', 'per', 'date', 'time', 'open', 'high', 'low', 'close', 'vol'])
-                    
+
                     df['date'] = pd.to_datetime(df['date'], format='%y%m%d')
                     self.__data[ticker] = df
             except Exception as e:
-                print(f"Ошибка при загрузке данных для {ticker}: {e}")
+                print(f"Error loading data for {ticker}: {e}")
 
     def plot_stock_data(self):
         """
-        Строит график цен закрытия для каждого тикера в self.__tickers.
+        Plots closing prices for each ticker in self.__tickers.
         """
         if not self.__data:
-            print("Пожалуйста, сначала выполните parse_stocks().")
+            print("Please run parse_stocks() first.")
             return
 
         plt.figure(figsize=(10, 6))
-        
+
         for ticker in self.__tickers:
             if ticker in self.__data:
                 plt.plot(self.__data[ticker]['date'], self.__data[ticker]['close'], label=ticker, linewidth=2)
 
-        plt.title('Цены закрытия акций', fontsize=16)
-        plt.xlabel('Дата', fontsize=14)
-        plt.ylabel('Цена закрытия', fontsize=14)
+        plt.title('Stock closing prices', fontsize=16)
+        plt.xlabel('Date', fontsize=14)
+        plt.ylabel('Closing price', fontsize=14)
         plt.legend(fontsize=12)
         plt.grid(True, linestyle='--', alpha=0.7)
         plt.style.use('seaborn-darkgrid')
@@ -105,23 +105,23 @@ class StockParser:
 
     def get_stocks_dataframe(self):
         """
-        Возвращает словарь с данными по акциям.
-        Возвращает:
-            dict: Словарь с DataFrame для каждого тикера.
+        Returns the dict of stock data.
+        Returns:
+            dict: Dict of DataFrames, one per ticker.
         """
         if self.__data:
             return self.__data
         else:
-            print("Пожалуйста, сначала выполните parse_stocks().")
+            print("Please run parse_stocks() first.")
 
     def save_to_csv(self, output_folder):
         """
-        Сохраняет данные по акциям в CSV файлы.
-        Аргументы:
-            output_folder (str): Папка для сохранения файлов.
+        Saves stock data to CSV files.
+        Args:
+            output_folder (str): Folder to save the files to.
         """
         if not self.__data:
-            print("Пожалуйста, сначала выполните parse_stocks().")
+            print("Please run parse_stocks() first.")
             return
 
         os.makedirs(output_folder, exist_ok=True)
@@ -129,6 +129,6 @@ class StockParser:
             output_filename = f'{output_folder}/{ticker}_stock_data.csv'
             try:
                 df.to_csv(output_filename, index=False)
-                print(f"Данные для {ticker} сохранены в {output_filename}")
+                print(f"Data for {ticker} saved to {output_filename}")
             except Exception as e:
-                print(f"Ошибка при сохранении данных для {ticker}: {e}")
+                print(f"Error saving data for {ticker}: {e}")

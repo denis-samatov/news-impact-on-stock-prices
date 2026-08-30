@@ -1,5 +1,5 @@
 import os
-from stocks_parser import StockParser  # Импортируем StockParser из файла, где он определен
+from stocks_parser import StockParser  # Import StockParser from the file where it's defined
 
 def main():
     output_folder = "stock_data"
@@ -14,7 +14,7 @@ def main():
     
     stock_parser.save_to_csv(output_folder)
      
-    print(f"Сбор данных завершен. Данные сохранены в папке {output_folder}.")
+    print(f"Data collection complete. Data saved to the {output_folder} folder.")
 
 if __name__ == "__main__":
     main()
