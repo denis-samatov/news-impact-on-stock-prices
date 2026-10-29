@@ -17,9 +17,9 @@
 
 `model/main.ipynb` trains two LSTM models (with and without a news-sentiment feature) on the same chronologically sorted price series, using a **90/10 chronological split** -- `train_data = data.iloc[:train_size]`, `test_data = data.iloc[train_size:]` -- not a random shuffle-split, which avoids training on future data relative to the test period. Both models use `look_back=30` (a 30-step input window) and are trained for a single run each (no cross-validation, no repeated runs with different seeds).
 
-**A known data-fidelity issue in this repo:** the notebook's headline comparison (`model/main.ipynb`, the Mann-Whitney U test cell) runs on a **hardcoded example RMSE list**, not on the actual single-run results computed earlier in the same notebook. The real, single-run RMSE values are **3.93 (with sentiment) vs. 8.04 (without sentiment)** -- a real difference in the expected direction, but from one run each, not a validated, statistically tested result. The significance test's "p < 0.05, sentiment improves forecast quality" conclusion is computed against synthetic placeholder numbers and should not be read as a validated finding. This is flagged directly in the notebook's own code as well.
+**Historical data-fidelity issue:** the earlier notebook used hardcoded example RMSE lists for a Mann–Whitney test. That cell is now explanatory Markdown and makes no executable significance claim. Historical single-run outputs (including 3.93 vs 8.04 RMSE in one comparison) remain saved for provenance and were not regenerated after the software corrections. They do not establish a real repeated-run distribution or a validated sentiment forecasting advantage.
 
-**What this means:** treat the single-run RMSE comparison (3.93 vs. 8.04) as suggestive, not proven. No systematic leakage audit, cross-validation, or repeated-run significance test was performed; a rigorous version of this project would repeat training across multiple seeds/windows and run the significance test on those real repeated results.
+A rigorous real-data experiment still requires audited availability timestamps, an untouched chronological test, multiple seeds/windows, simple baselines and paired temporal uncertainty. The new offline smoke is explicitly synthetic software acceptance.
 
 ## Features
 - **Data Collection**: Scrapes news articles and stock prices from bcs-express.ru and Finam.
@@ -29,11 +29,11 @@
 ## Installation
 1. Clone the repository:
     ```bash
-    git clone https://github.com/denis-samatov/news_impact_on_stock_prices.git
+    git clone https://github.com/denis-samatov/news-impact-on-stock-prices.git
     ```
 2. Install the required packages:
     ```bash
-    pip install -r requirements.txt
+    pip install --require-hashes -r requirements-execution.txt
     ```
 
 ## Usage
@@ -44,3 +44,55 @@ The original term-paper writeup, in Russian, is in [`report/`](report/).
 
 ## Contributing
 Contributions are welcome! Please open an issue to discuss improvements, features, or bugs.
+
+
+## Corrected offline acceptance path
+
+```bash
+python -m pytest tests -q
+OMP_NUM_THREADS=1 python -m model.offline_smoke > /tmp/news-synthetic-smoke.json
+```
+
+The second command uses a generated numeric series, three rolling-origin folds and two seeds,
+with a persistence baseline and saved predictions. It is software acceptance, not an experiment
+on real quotes/news. No collection, translation, model download, API call or real performance
+result is implied. `scikit-learn` is required; install NLTK resources explicitly only when preparing
+the collector (`python -m nltk.downloader punkt punkt_tab`). Imports no longer download NLTK data.
+
+`PyTorchRegressor` now predicts one target per supplied row from the preceding `look_back`
+observed feature rows. Its target scaler is separate from its feature scaler; both fit only
+training data. Validation rows extend the observed history, so this is rolling one-step,
+not open-loop forecasting. Use chronological `TimeSeriesSplit`, an untouched outer test and
+multiple fixed seeds. `StockPredictor.calculate_rmse()` also returns the numeric RMSE.
+The old synthetic significance cell is now non-executable explanatory Markdown. Saved earlier
+notebook outputs are historical and were not regenerated after this repair.
+
+`model.combine_stocks_news.join_available_news` joins one ticker at a time. Supply timezone-aware
+`forecast_at` decisions from the actual trading calendar, and `available_at` timestamps stating
+when article information became usable. Date-only/publication timestamps are not silently promoted
+to that stronger claim. Only strictly earlier information enters a decision; equal-time articles
+are mean-aggregated, latest available score is selected, and absence stays NaN. Audit original
+source revisions, collection time, duplicates, after-close availability and training-only imputation
+before real research. A genuine market experiment and its data rights remain prerequisites.
+
+## Separate execution profile (2026-10-29)
+
+`requirements-execution.in` is the maintained input; `requirements-execution.txt` is generated
+with `uv pip compile requirements-execution.in --python-version 3.13 --generate-hashes --output-file requirements-execution.txt`.
+It is a new Python 3.13 software-validation environment, not the historical scientific environment.
+Create a local venv, then install with `python -m pip install --require-hashes -r requirements-execution.txt`.
+Do not edit the generated lock by hand. OSV exact-version scanning covers the resolved public
+packages; it does not establish exploit reachability or guarantee that undisclosed issues are absent.
+Historical locks, predictions and numerical results remain unchanged. A new experimental result
+requires its own inputs, source revision, environment and numerical qualification.
+
+Collector imports perform no model downloads or browser creation. Browser page loads use a
+30-second timeout, show-more attempts default to 100, and stock responses are capped at 16 MiB.
+The collector test uses a fake browser and in-memory response; the real websites, browser driver,
+translation checkpoints and market timestamps were not contacted or requalified.
+
+The original `requirements.txt` is retained byte-for-byte as a historical dependency snapshot;
+it is not the maintained installation command. Use the separate execution profile above.
+
+This profile was resolved on macOS arm64 for Python 3.13. It is not a universal lock for
+all operating systems, Python versions or accelerators; regenerate and qualify another target.

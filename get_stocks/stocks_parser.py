@@ -72,8 +72,11 @@ class StockParser:
         for ticker in self.__tickers:
             url = self.generate_url(ticker)
             try:
-                with urlopen(url) as page:
-                    content = page.read().decode('utf-8')
+                with urlopen(url, timeout=30) as page:
+                    payload = page.read(16 * 1024 * 1024 + 1)
+                    if len(payload) > 16 * 1024 * 1024:
+                        raise ValueError('stock response exceeds download limit')
+                    content = payload.decode('utf-8')
                     df = pd.read_csv(StringIO(content), delimiter=';', names=['ticker', 'per', 'date', 'time', 'open', 'high', 'low', 'close', 'vol'])
 
                     df['date'] = pd.to_datetime(df['date'], format='%y%m%d')

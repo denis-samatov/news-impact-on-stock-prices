@@ -1,6 +1,9 @@
 import os
 import pandas as pd
-from news_parser import NewsParser, HelperParser
+if __package__:
+    from .news_parser import NewsParser, HelperParser
+else:
+    from news_parser import NewsParser, HelperParser
 
 
 
@@ -27,7 +30,7 @@ def main():
         except Exception as e:
             print(f"Error collecting news: {e}")
         finally:
-            news_parser.__driver.quit()
+            news_parser.close_driver()
     
     if os.path.exists(news_file):
         df = pd.read_csv(news_file)

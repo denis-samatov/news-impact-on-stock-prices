@@ -33,13 +33,13 @@ class DeepStockLSTM(nn.Module):
         num_layers (int): Number of recurrent layers.
         output_dim (int): Number of output features.
     """
-    def __init__(self, input_dim, hidden_dim, num_layers, output_dim):
+    def __init__(self, input_dim, hidden_dim, num_layers, output_dim, dropout_rate=0.3):
         super(DeepStockLSTM, self).__init__()
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
 
         # Multiple LSTM layers
-        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True, dropout=0.3)
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True, dropout=dropout_rate if num_layers > 1 else 0.0)
 
         # Batch Normalization
         self.batch_norm = nn.BatchNorm1d(hidden_dim)
@@ -151,6 +151,7 @@ class StockPredictor:
     def calculate_rmse(self):
         rmse = math.sqrt(mean_squared_error(self.y_test_original, self.predicted_values))
         print('Test result: %.2f RMSE' % rmse)
+        return rmse
 
     def plot_results(self):
         plt.figure(figsize=(15, 6))

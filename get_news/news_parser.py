@@ -9,10 +9,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 from nltk.tokenize import sent_tokenize
-from sentiment_analyzer import NewsSentimentAnalyzer
+if __package__:
+    from .sentiment_analyzer import NewsSentimentAnalyzer
+else:
+    from sentiment_analyzer import NewsSentimentAnalyzer
 
-import nltk
-nltk.download('punkt')
+# Install punkt/punkt_tab explicitly during environment setup, never at import.
 
 
 # Class for collecting news from a given URL and filtering by keywords.
@@ -110,7 +112,7 @@ class NewsParser:
             print("An error occurred while parsing news:", e)
             return None
 
-    def parse_news(self, len_dataset=500, stop_date=None):
+    def parse_news(self, len_dataset=500, stop_date=None, max_pages=100):
         """
         Sequentially parses news from the site, loading more data and checking
         stop conditions.
@@ -118,11 +120,15 @@ class NewsParser:
         Args:
             len_dataset (int): Target number of news items to parse.
             stop_date (str): Date after which parsing stops.
+            max_pages (int): Maximum show-more attempts, including empty pages.
         """
         self.__driver = webdriver.Chrome()
+        self.__driver.set_page_load_timeout(30)
         self.__driver.get(self.__url)
 
-        while len(self.__news) < len_dataset:
+        pages = 0
+        while len(self.__news) < len_dataset and pages < max_pages:
+            pages += 1
             # XPath text below matches the site's actual Russian-language
             # "Show more news" button label, so it's left untranslated.
             show_more_button = WebDriverWait(self.__driver, 10).until(
@@ -150,7 +156,13 @@ class NewsParser:
                 print("Loaded:", len(self.__news))
                 self.save_to_csv('news_data', f'{self.ticker}_in_progress.csv')
 
-        self.__driver.quit()
+        self.close_driver()
+
+    def close_driver(self):
+        """Close a browser created by this parser; safe before setup or after close."""
+        if self.__driver is not None:
+            self.__driver.quit()
+            self.__driver = None
 
     def get_news_list(self):
         """
@@ -189,6 +201,7 @@ class HelperParser:
     def __init__(self, keywords, ticker):
         self.__keywords = keywords[ticker]
         self.__driver = webdriver.Chrome()
+        self.__driver.set_page_load_timeout(30)
         self.__analyzer = NewsSentimentAnalyzer()
 
     def parse_dataset(self, dataframe):
