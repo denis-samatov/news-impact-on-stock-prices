@@ -1,0 +1,32 @@
+name: Offline software contracts
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MPLBACKEND: Agg
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install CPU Torch and test dependencies
+        run: |
+          python -m pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements-contracts.in
+          python -m pip check
+      - name: Check changed-source syntax and undefined names
+        run: ruff check --select E9,F63,F7,F82 tests model get_news get_stocks
+      - name: Execute real offline software contracts
+        run: python -m pytest tests -q
+      - name: Exercise synthetic rolling-origin predictions
+        run: python -m model.offline_smoke > synthetic-software-acceptance.json

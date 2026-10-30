@@ -100,3 +100,17 @@ def test_news_collector_bounds_empty_pagination_and_closes_browser(tmp_path, mon
     parser.close_driver()
     assert browser.clicks == 2
     assert browser.closes == 1
+
+
+def test_asof_preserves_caller_fields_order_and_strict_temporal_cutoff():
+    stocks = pd.DataFrame({"forecast_at": ["2024-01-01T16:00Z", "2024-01-01T14:00Z"],
+                           "_input_order": [10, 11]})
+    news = pd.DataFrame({"available_at": ["2024-01-01T13:00Z", "2024-01-01T13:00Z",
+                                         "2024-01-01T15:00Z", "2024-01-01T16:00Z"],
+                         "real_score": [.1, .3, .9, 1.]})
+    original_stocks, original_news = stocks.copy(deep=True), news.copy(deep=True)
+    joined = combine_stocks_news.join_available_news(stocks, news)
+    assert joined["_input_order"].tolist() == [10, 11]
+    assert joined.real_score.tolist() == pytest.approx([.9, .2])
+    pd.testing.assert_frame_equal(stocks, original_stocks)
+    pd.testing.assert_frame_equal(news, original_news)

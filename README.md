@@ -96,3 +96,21 @@ it is not the maintained installation command. Use the separate execution profil
 
 This profile was resolved on macOS arm64 for Python 3.13. It is not a universal lock for
 all operating systems, Python versions or accelerators; regenerate and qualify another target.
+
+## Automated offline contracts
+
+The `Offline software contracts` workflow runs real synthetic software tests on Python 3.13,
+checks undefined names and parser errors, and checks dependency compatibility. On Linux it
+installs the CPU Torch build from the official PyTorch index before the test profile:
+
+```bash
+python -m pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r requirements-contracts.in
+python -m pip check
+python -m pytest tests -q
+```
+
+The direct test requirements are explicit; they are not a universal transitive lock or a claim
+that every notebook/model environment is pinned. CI sets Hugging Face/Transformers offline
+mode. It does not fetch weights, contact websites/providers, run a browser, or demonstrate
+model quality. The existing macOS execution profile remains separate where applicable.
