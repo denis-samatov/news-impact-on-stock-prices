@@ -26,9 +26,12 @@ def join_available_news(stocks, news):
     right["available_at"] = _aware_utc(right["available_at"])
     right["real_score"] = pd.to_numeric(right["real_score"], errors="raise")
     right = right.groupby("available_at", as_index=False)["real_score"].mean()
-    left["_input_order"] = range(len(left))
+    order_column = "_input_order"
+    while order_column in left.columns:
+        order_column = "_" + order_column
+    left[order_column] = range(len(left))
     result = pd.merge_asof(left.sort_values("forecast_at", kind="stable"),
                            right.sort_values("available_at", kind="stable"),
                            left_on="forecast_at", right_on="available_at",
                            direction="backward", allow_exact_matches=False)
-    return result.sort_values("_input_order").drop(columns="_input_order").reset_index(drop=True)
+    return result.sort_values(order_column).drop(columns=order_column).reset_index(drop=True)
